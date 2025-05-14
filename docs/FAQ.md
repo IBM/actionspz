@@ -16,7 +16,7 @@ environment is maintainted for all users.
 
 ## How do I make changes to workflows for seamless integration with existing platforms?
 
-After the GitHub App is installed on your repo, add the runs-on: tag to your
+After the GitHub App is installed on your repo, add the ```runs-on:``` tag to your
 existing workflow file.
 
 ## Are all actions supported out-of-the-box?
