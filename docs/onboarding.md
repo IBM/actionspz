@@ -7,7 +7,7 @@ You can only install the Github Actions App on repositories (aka repos) in which
 
 ### 1. Install the Github App on the repo
 
-[The app is located here.](https://github.com/apps/power-z-gha-runner/) The Github interface will guide you through the steps.
+Please [submit an issue] on this repo to access Github Actions on Power and Z.(https://github.com/IBM/actionspz/issues)
 
 ### 2. Create an IBMid
 
