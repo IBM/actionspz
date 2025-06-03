@@ -9,6 +9,8 @@ You can only install the GitHub Actions App on repositories (aka repos) in which
 
 Please [submit a new issue](https://github.com/IBM/actionspz/issues) on this repo to access GitHub Actions on Power and Z.
 
+Read more about [using GitHub Apps.](https://docs.github.com/en/apps/using-github-apps/about-using-github-apps)
+
 ### 2. Create an IBMid
 
 ***The IBMid needs to be the same email address you use for your GitHub account.*** This step is part of the GitHub App installation process, you will be redirected to the proper page. [Read more about the IBMid here.](https://www.ibm.com/docs/en/ibmid?topic=introduction)
