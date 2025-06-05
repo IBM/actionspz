@@ -24,6 +24,8 @@ runs-on: ubuntu-xxx-s390x
 runs-on: ubuntu-xxx-ppc64le
 ```
 
+View a list of our [supported images](./supported-images.txt) in this repo.
+
 These runners are considered self-hosted. Read more about self-hosted runners on [the official GitHub docs.](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/using-self-hosted-runners-in-a-workflow)
 
 ### 4. Use the Actions tab under the repo 
