@@ -25,6 +25,10 @@ The actions themselves need to be functional on ppc64le and s390x. If you're
 unsure, our team can work with your project to make this determination, and
 identify the steps that may need to be taken to on-board your project.
 
+## Are the runner images used for the jobs ephemeral?
+
+Yes, the runners are ephemeral. For every job, a new runner is allocated and then deleted once the job completes.
+
 ## How do I report a problem?
 
 Please use the [issue tracker](https://github.com/IBM/actionspz/issues) in this
