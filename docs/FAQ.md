@@ -29,6 +29,11 @@ identify the steps that may need to be taken to on-board your project.
 
 Yes, the runners are ephemeral. For every job, a new runner is allocated and then deleted once the job completes.
 
+## Can I specify the IBM hardware to execute my workflow on?
+
+Yes, you can view our [supported images](./supported-images.txt) here. 
+`ubuntu-24.0-ppc64le` image tag is to utilize IBM POWER9, `ubuntu-24.0-ppc64le-p10` for IBM POWER10, and `ubuntu-24.04-s390x` is for IBM Z.
+
 ## How do I report a problem?
 
 Please use the [issue tracker](https://github.com/IBM/actionspz/issues) in this
