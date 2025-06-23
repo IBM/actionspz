@@ -32,7 +32,7 @@ Yes, the runners are ephemeral. For every job, a new runner is allocated and the
 ## Can I specify the IBM hardware to execute my workflow on?
 
 Yes, you can view our [supported images](./supported-images.txt) here. 
-`ubuntu-24.0-ppc64le` image tag is to utilize IBM POWER9, `ubuntu-24.0-ppc64le-p10` for IBM POWER10, and `ubuntu-24.04-s390x` is for IBM Z.
+`ubuntu-24.04-ppc64le` image tag is to utilize IBM POWER9, `ubuntu-24.04-ppc64le-p10` for IBM POWER10, and `ubuntu-24.04-s390x` is for IBM Z.
 
 ## How do I report a problem?
 
