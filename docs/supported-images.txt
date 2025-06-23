@@ -1,6 +1,6 @@
-ubuntu-24.0-ppc64le
-ubuntu-22.0-ppc64le
-ubuntu-24.0-ppc64le-p10
-ubuntu-22.0-ppc64le-p10
+ubuntu-24.04-ppc64le
+ubuntu-22.04-ppc64le
+ubuntu-24.04-ppc64le-p10
+ubuntu-22.04-ppc64le-p10
 ubuntu-24.04-s390x
 ubuntu-22.04-s390x
