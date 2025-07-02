@@ -4,6 +4,10 @@
 
 Please read our [onboarding document](onboarding.md) located in this repo!
 
+## What permissions are granted to the GitHub app?
+
+This app requires read access to metadata, read and write access to actions, administration, checks, and workflows for the repository selected for install. Additionally this GitHub app requires reading the User account email address for security reasons. Read more about why adminstrative read and write access are required in the official GitHub API docs [here](https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-a-repository).
+
 ## Is there a fee to use this service? Do I need a credit card to sign up?
 
 This service is no-cost and you will not be asked for a credit card upon
@@ -12,7 +16,7 @@ sign-up. You will need an IBMid (also no-cost).
 ## Why do I need to create an IBMid?
 
 An IBMid is required to help with service security so we can ensure a safe
-environment is maintainted for all users.
+environment is maintainted for all users. IBM's official Privacy statement is located [here](https://www.ibm.com/trust/privacy).
 
 ## How do I make changes to workflows for seamless integration with existing platforms?
 
