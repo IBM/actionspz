@@ -2,7 +2,7 @@
 name: New project template
 about: Request to on-board a new project to GitHub Actions for IBM Power & IBM Z and
   LinuxONE
-title: 'New Project: PROJECT NAME'
+title: 'PROJECT NAME'
 labels: new-project, p9, z
 assignees: ''
 
