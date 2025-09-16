@@ -4,7 +4,7 @@ about: Request to on-board a new project to GitHub Actions for IBM Power & IBM Z
   LinuxONE
 title: PROJECT NAME
 labels: new-project, p9, z
-assignees: ''
+assignees: mtarsel, pleia2
 
 ---
 
