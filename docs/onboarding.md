@@ -1,6 +1,6 @@
 # Welcome to GitHub Actions on Power, Z, and LinuxONE
 
-You can only install the GitHub Actions App on repositories (aka repos) in which you are the owner or admin. If the repo is part of an GitHub Organization, the org admin can select specific repos for installation (or all the repos). A repo admin/owner can install the app on the repo they have permissions for, even if it's part of an organization.
+You can only install the GitHub Actions App on repositories (aka repos) in which you are the owner or admin. If the repo is part of an GitHub Organization, the org admin can select specific repos for installation (or all the repos). A repo admin/owner can install the app on the repo they have permissions for, even if it's part of an organization. Read more about GitHub App installations on the [official GitHub website.](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps#who-can-install-github-apps-and-authorize-oauth-apps)
 
 Read more about personal repo access in the [GitHub official docs.](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-user-account-settings/permission-levels-for-a-personal-account-repository) Read more about repo permissions in organizations on [the official GitHub docs.](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/managing-repository-roles/repository-roles-for-an-organization)
 
