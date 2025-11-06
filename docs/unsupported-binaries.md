@@ -25,7 +25,6 @@ We currently do not have official publicly hosted binaries for the following pac
 | packer                 | ✓           | ✗         |
 | pulumi                 | ✗           | ✗         |
 | rlang                  | ✗           | ✗         |
-| ruby           | ✗           | ✗         |
 | sqlpackage             | ✗           | ✗         |
 | swift                  | ✗           | ✗         |
 | terraform              | ✓           | ✗         |
