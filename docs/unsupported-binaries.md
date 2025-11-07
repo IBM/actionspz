@@ -20,7 +20,6 @@ We currently do not have official publicly hosted binaries for the following pac
 | julia                  | ✓           | ✗         |
 | microsoft-edge         | ✗           | ✗         |
 | mssql-tools            | ✗           | ✗         |
-| oc-cli                 | ✗           | ✗         |
 | oras-cli               | ✓           | ✗         |
 | packer                 | ✓           | ✗         |
 | pulumi                 | ✗           | ✗         |
