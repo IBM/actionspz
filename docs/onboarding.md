@@ -4,6 +4,7 @@ You can only install the GitHub Actions App on repositories (aka repos) in which
 
 Read more about personal repo access in the [GitHub official docs.](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-user-account-settings/permission-levels-for-a-personal-account-repository) Read more about repo permissions in organizations on [the official GitHub docs.](https://docs.github.com/en/organizations/managing-user-access-to-your-organizations-repositories/managing-repository-roles/repository-roles-for-an-organization)
 
+[Read our criteria doc here.](./criteria.md)
 
 ## Steps to install
 
