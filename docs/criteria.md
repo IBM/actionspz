@@ -28,3 +28,4 @@ These criteria define the minimum standards that any request to use **Actions fo
   - Documented upon request
 - **Preliminary validation work** on IBM architectures must be completed **prior to submitting an onboarding request**.
 
+It must be evident that the project will comply with the terms and restrictions in the [IBM Cloud Services Agreement](https://cloud.ibm.com/docs/overview?topic=overview-terms) and the Service Description for the Service.
