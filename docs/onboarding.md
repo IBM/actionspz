@@ -31,7 +31,7 @@ To ensure workflows run correctly—especially for public repositories and forks
 - [ ] Check  **"Allow public repositories"**  to enable it. (This is necessary to allow forks of repositories to execute CI workflows via Pull Requests.)
 - [ ] Ensure  **"Repository access"**  is set to  **"All repositories"**  (or verify the specific repositories are included in the "Selected repositories" list).
 
-#### **Enable Approval for Fork Pull Requests (Optional)**
+#### **Enable Approval for Fork Pull Requests (Optional, but Recommended)**
 
 To require approval before running GitHub Actions CI when a PR is raised from a fork, adjust the settings below at the Repository or Organization level.
 
@@ -40,16 +40,16 @@ To require approval before running GitHub Actions CI when a PR is raised from a 
 1. Go to your **Repository**.
 2. Click **Settings** (top tabs).
 3. In the left sidebar, click **Actions** > **General**.
-4. Scroll to  **"Fork pull request workflows from outside collaborators"** .
-5. Select **Require approval for all outside collaborators**.
+4. Scroll to  **"Approval for running fork pull request workflows from contributors"** .
+5. Select **Require approval for all external contributors**.
 
 **Organization Level**
 
 1. Go to your **Organization** profile page.
 2. Click **Settings** (top tabs).
 3. In the left sidebar, click **Actions** > **General**.
-4. Scroll to  **"Fork pull request workflows from outside collaborators"** .
-5. Select **Require approval for all outside collaborators**.
+4. Scroll to  **"Approval for running fork pull request workflows from contributors"** .
+5. Select **Require approval for all external contributors**.
 
 ### 4. Setup your workflow file
 
