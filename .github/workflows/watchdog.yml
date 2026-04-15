@@ -1,0 +1,96 @@
+name: Watchdog - Monitor gha-prod-workflow Status
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  monitor-blank:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gh jq
+
+      - name: Check queued runs of blank.yml
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking queued runs..."
+
+          runs=$(gh api repos/${{ github.repository }}/actions/workflows/blank.yml/runs \
+            --jq '.workflow_runs[] | select(.status=="queued")')
+
+          echo "stale_found=false" >> $GITHUB_ENV
+
+          if [ -z "$runs" ]; then
+            echo "No queued runs found."
+            exit 0
+          fi
+
+          cutoff_yellow=$(date -u -d "30 minutes ago" +%s)
+          cutoff_red=$(date -u -d "60 minutes ago" +%s)
+          cutoff_severe=$(date -u -d "90 minutes ago" +%s)
+
+          echo "$runs" | jq -c '.' > runs.txt
+          > stale_runs.txt
+
+          while read -r run; do
+            id=$(echo "$run" | jq -r '.id')
+            num=$(echo "$run" | jq -r '.run_number')
+            created=$(echo "$run" | jq -r '.created_at')
+            created_ts=$(date -d "$created" +%s)
+
+            if [ "$created_ts" -lt "$cutoff_severe" ]; then
+              severity="severe"
+            elif [ "$created_ts" -lt "$cutoff_red" ]; then
+              severity="red"
+            elif [ "$created_ts" -lt "$cutoff_yellow" ]; then
+              severity="yellow"
+            else
+              continue
+            fi
+
+            echo "$id,$num,$created,$severity" >> stale_runs.txt
+
+          done < runs.txt
+
+          if [ -s stale_runs.txt ]; then
+            echo "stale_found=true" >> $GITHUB_ENV
+          fi
+
+      - name: Send Slack Alert if stale jobs found
+        if: env.stale_found == 'true'
+        run: |
+          WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
+          
+          while IFS=',' read -r id num created severity; do
+            [ -z "$id" ] && continue
+
+            run_url="https://github.com/${{ github.repository }}/actions/runs/$id"
+
+            if [ "$severity" = "severe" ]; then
+              msg="🔥 Severe Alert: Job stuck >90 min    \nRun: $num\nCreated: $created\n$run_url"
+            elif [ "$severity" = "red" ]; then
+              msg="🚨 Red Alert: Job stuck >60 min     \nRun: $num\nCreated: $created\n$run_url"
+            else
+              msg="⚠️ Yellow Alert: Job stuck >30 min    \nRun: $num\nCreated: $created\n$run_url"
+            fi
+
+            payload=$(jq -n --arg text "$msg" '{text: $text}')
+            
+            curl -X POST -H 'Content-type: application/json' \
+              --data "$payload" \
+              "$WEBHOOK"
+
+            sleep 1
+
+          done < stale_runs.txt

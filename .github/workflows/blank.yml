@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'  # Runs in every 30 minutes
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runner: ["ubuntu-24.04-ppc64le", "ubuntu-24.04-ppc64le-p10"]
+      fail-fast: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run a one-line script
+        run: echo "Hello, world! GitHub app is running successfully on ${{ matrix.runner }}"
+
+  code-quality:
+    name: Code quality
+    strategy:
+      matrix:
+        runner: ["ubuntu-24.04-ppc64le", "ubuntu-24.04-ppc64le-p10"]
+      fail-fast: false
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run linting
+        run: |
+          if [ -x run_linting.sh ]; then
+            bash run_linting.sh
+          else
+            echo "Skipping linting: run_linting.sh not found or not executable"
+          fi
+
+ 
+
+  notify:
+    name: Notify failed build
+    needs:
+      - code-quality
+      - build
+    if: failure() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Alert
+        run: |
+          msg="❌ CI Failed\nRepo: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nRun: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$msg\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
