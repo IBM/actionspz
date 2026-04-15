@@ -1,0 +1,51 @@
+name: Large-Workers-Fleet
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */1 * * *'   # every 1 hour
+
+jobs:
+  health-check:
+    strategy:
+      matrix:
+        runner: [
+          "ubuntu-24.04-ppc64le-2xlarge",
+          "ubuntu-24.04-ppc64le-2xlarge-p10",
+        ]
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Runner info
+        run: |
+          echo "Runner: ${{ matrix.runner }}"
+          uname -a
+          uptime
+
+      # CPU stress test
+      - name: CPU test
+        run: timeout 25s bash -c "yes > /dev/null" || true
+
+      # IO heavy test (larger)
+      - name: IO test
+        run: |
+          dd if=/dev/zero of=testfile bs=1M count=512 oflag=dsync
+          rm -f testfile
+
+      # Network test
+      - name: Network test
+        run: |
+          ping -c 4 github.com
+          curl -I https://github.com
+
+      # Memory check
+      - name: Memory check
+        run: free -h
+
+      # Process snapshot
+      - name: Process snapshot
+        run: ps aux --sort=-%mem | head -10

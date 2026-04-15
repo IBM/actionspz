@@ -1,0 +1,133 @@
+name: Watchdog - Multi Workflow Health Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # Runs every 5 minutes
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gh jq
+
+      - name: Initialize state file if missing
+        run: |
+
+          STATE_FILE="/tmp/watchdog_state.json"
+          if [ ! -f "$STATE_FILE" ]; then
+            echo '{}' > "$STATE_FILE"
+          fi
+
+      - name: Run watchdog monitoring
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          STATE_FILE="/tmp/watchdog_state.json"
+          workflows=("Default-Runners-Fleet.yml" "Large-Workers-Fleet.yml")
+
+          state=$(cat "$STATE_FILE")
+
+          # 🔥 FIX: preserve previous state
+          new_state="$state"
+
+          alerts=""
+          recoveries=""
+
+          for wf in "${workflows[@]}"; do
+            echo "Checking workflow: $wf"
+
+            latest=$(gh api repos/${{ github.repository }}/actions/workflows/$wf/runs \
+              --jq '.workflow_runs[0]')
+
+            if [ "$latest" = "null" ] || [ -z "$latest" ]; then
+              echo "No runs found for $wf"
+              continue
+            fi
+
+            id=$(echo "$latest" | jq -r '.id')
+            status=$(echo "$latest" | jq -r '.status')
+            conclusion=$(echo "$latest" | jq -r '.conclusion')
+
+            url="https://github.com/${{ github.repository }}/actions/runs/$id"
+
+            prev=$(echo "$state" | jq -r --arg wf "$wf" '.[$wf] // "healthy"')
+
+            echo "Previous state: $prev"
+            echo "Current status: $status"
+
+            # -------------------------
+            # 🚨 QUEUE DETECTED
+            # -------------------------
+            if [ "$status" = "queued" ]; then
+              if [ "$prev" != "queued" ]; then
+                alerts="$alerts\n🚨 QUEUED: $wf | $url"
+              fi
+
+              new_state=$(echo "$new_state" | jq --arg wf "$wf" '. + {($wf): "queued"}')
+
+            # -------------------------
+            # ✅ RECOVERY DETECTED
+            # -------------------------
+            elif [ "$status" != "queued" ] && [ "$prev" = "queued" ]; then
+              recoveries="$recoveries\n✅ RECOVERED: $wf is back to normal | $url"
+
+              new_state=$(echo "$new_state" | jq --arg wf "$wf" '. + {($wf): "healthy"}')
+
+            # -------------------------
+            # ❌ FAILURE DETECTED (optional)
+            # -------------------------
+            elif [ "$conclusion" = "failure" ]; then
+              if [ "$prev" != "failed" ]; then
+                alerts="$alerts\n🚨 FAILURE: $wf | $url"
+              fi
+
+              new_state=$(echo "$new_state" | jq --arg wf "$wf" '. + {($wf): "failed"}')
+
+            # -------------------------
+            # NO CHANGE
+            # -------------------------
+            else
+              new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg prev "$prev" '. + {($wf): $prev}')
+            fi
+
+          done
+
+          echo "$new_state" > "$STATE_FILE"
+
+          {
+            echo "alerts<<EOF"
+            echo -e "$alerts"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+          {
+            echo "recoveries<<EOF"
+            echo -e "$recoveries"
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+      - name: Send queue/failure alerts
+        if: env.alerts != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"🚨 *Workflow Alert*\n$alerts\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Send recovery alerts
+        if: env.recoveries != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"✅ *Recovery Alert*\n$recoveries\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+

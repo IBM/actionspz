@@ -1,0 +1,58 @@
+name: Default-Runners-Fleet
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *' # Runs every 30 minutes
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runner: [
+          "ubuntu-24.04-ppc64le",
+          "ubuntu-24.04-ppc64le-p10",
+          "ubuntu-24.04-s390x"
+        ]
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Runner info
+        run: |
+          echo "Runner: ${{ matrix.runner }}"
+          uname -a
+          uptime
+
+      # CPU test
+      - name: CPU test
+        run: timeout 20s bash -c "yes > /dev/null" || true
+
+      # IO test
+      - name: IO test
+        run: |
+          set -e
+          dd if=/dev/zero of=testfile bs=1M count=256 oflag=dsync
+          rm -f testfile
+
+      # Network test
+      - name: Network test
+        run: |
+          set -e
+          ping -c 3 github.com
+          curl -I https://github.com
+
+      # Memory
+      - name: Memory check
+        run: free -h
+
+      # Process check
+      - name: Process snapshot
+        run: ps aux --sort=-%mem | head -10
