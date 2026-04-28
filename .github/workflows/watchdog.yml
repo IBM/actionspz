@@ -1,0 +1,150 @@
+name: Watchdog - Multi Workflow Health Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # Runs every 5 minutes
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gh jq
+
+      - name: Checkout repo (for state persistence)
+        uses: actions/checkout@v4
+
+      - name: Monitor workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -e
+
+          owner_repo="${{ github.repository }}"
+          workflows=("Default-Runners-Fleet.yml" "Large-Workers-Fleet.yml")
+  
+          state_file="watchdog_state.json"
+  
+             
+          if [ -f "$state_file" ]; then
+            state=$(cat "$state_file")
+          else
+            state='{}'
+          fi
+  
+          new_state='{}'
+          alerts=""
+  
+          for wf in "${workflows[@]}"; do
+            echo "Checking workflow: $wf"
+  
+            runs=$(gh api repos/$owner_repo/actions/workflows/$wf/runs --jq '.workflow_runs')
+            latest=$(echo "$runs" | jq '.[0]')
+  
+            if [ "$latest" = "null" ]; then
+              echo "No runs found for $wf"
+              continue
+            fi
+  
+            status=$(echo "$latest" | jq -r '.status // "unknown"')
+            conclusion=$(echo "$latest" | jq -r '.conclusion // "unknown"')
+            created=$(echo "$latest" | jq -r '.created_at')
+            html_url=$(echo "$latest" | jq -r '.html_url')
+  
+            prev=$(echo "$state" | jq -r --arg wf "$wf" '.[$wf] // "none"')
+  
+            echo "Status: $status | Conclusion: $conclusion | Prev: $prev"
+  
+            # Time calculation
+            now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            created_epoch=$(date -d "$created" +%s 2>/dev/null || echo 0)
+            now_epoch=$(date -d "$now" +%s 2>/dev/null || echo 0)
+            queued_minutes=$(( (now_epoch - created_epoch) / 60 ))
+
+          # QUEUED LOGIC WITH SEVERITY
+          if [ "$status" = "queued" ]; then
+
+            if [ "$queued_minutes" -ge 90 ]; then
+              alerts="${alerts}
+              🚨 *SEVERE*: Workflow *$wf* stuck in queue for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
+
+            elif [ "$queued_minutes" -ge 60 ]; then
+              alerts="${alerts}
+              🔴 *HIGH*: Workflow *$wf* queued for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
+
+            elif [ "$queued_minutes" -ge 30 ]; then
+              alerts="${alerts}
+              🟡 *WARNING*: Workflow *$wf* queued for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
+            fi
+
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "queued_$queued_minutes" '.[$wf]=$val')
+
+          # FAILURE LOGIC
+            elif [ "$status" = "completed" ] && [ "$conclusion" = "failure" ]; then
+            if [ "$prev" != "failure" ]; then
+              alerts="${alerts}
+              ❌*FAILED*: Workflow *$wf* failed"
+            fi
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "failure" '.[$wf]=$val')
+
+          # RECOVERY LOGIC
+          elif [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+            if [[ "$prev" == failure* || "$prev" == queued* ]]; then
+              alerts="${alerts}
+              ✅ *RECOVERED*: Workflow *$wf* is back to normal
+              🔗 View Run: ${html_url}"
+            fi
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "success" '.[$wf]=$val')
+
+          else
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "$status" '.[$wf]=$val')
+          fi
+
+          done
+
+          # Send Slack alert if needed
+          if [ -n "$alerts" ]; then
+            echo -e "Alerts: $alerts"
+  
+            payload=$(jq -n --arg text "$alerts" '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨Workflow Health Alert"
+                  }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": $text
+                }
+              }
+            ]
+          }')
+
+          curl -s POST -H "Content-type: application/json" \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+          fi
+
+          # Save new state
+          echo "$new_state" > "$state_file" 
