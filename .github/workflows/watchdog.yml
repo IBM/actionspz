@@ -1,17 +1,21 @@
-name: Watchdog - Monitor gha-prod-workflow Status
+name: Watchdog - Multi Workflow Health Monitor
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *" # Runs every 5 minutes
   workflow_dispatch:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
 
 jobs:
-  monitor-blank:
+  monitor:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Install dependencies
@@ -19,78 +23,128 @@ jobs:
           sudo apt update
           sudo apt install -y gh jq
 
-      - name: Check queued runs of blank.yml
-        id: check
+      - name: Checkout repo (for state persistence)
+        uses: actions/checkout@v4
+
+      - name: Monitor workflows
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          echo "Checking queued runs..."
+          set -e
 
-          runs=$(gh api repos/${{ github.repository }}/actions/workflows/blank.yml/runs \
-            --jq '.workflow_runs[] | select(.status=="queued")')
-
-          echo "stale_found=false" >> $GITHUB_ENV
-
-          if [ -z "$runs" ]; then
-            echo "No queued runs found."
-            exit 0
+          owner_repo="${{ github.repository }}"
+          workflows=("Default-Runners-Fleet.yml" "Large-Workers-Fleet.yml")
+  
+          state_file="watchdog_state.json"
+  
+             
+          if [ -f "$state_file" ]; then
+            state=$(cat "$state_file")
+          else
+            state='{}'
           fi
-
-          cutoff_yellow=$(date -u -d "30 minutes ago" +%s)
-          cutoff_red=$(date -u -d "60 minutes ago" +%s)
-          cutoff_severe=$(date -u -d "90 minutes ago" +%s)
-
-          echo "$runs" | jq -c '.' > runs.txt
-          > stale_runs.txt
-
-          while read -r run; do
-            id=$(echo "$run" | jq -r '.id')
-            num=$(echo "$run" | jq -r '.run_number')
-            created=$(echo "$run" | jq -r '.created_at')
-            created_ts=$(date -d "$created" +%s)
-
-            if [ "$created_ts" -lt "$cutoff_severe" ]; then
-              severity="severe"
-            elif [ "$created_ts" -lt "$cutoff_red" ]; then
-              severity="red"
-            elif [ "$created_ts" -lt "$cutoff_yellow" ]; then
-              severity="yellow"
-            else
+  
+          new_state='{}'
+          alerts=""
+  
+          for wf in "${workflows[@]}"; do
+            echo "Checking workflow: $wf"
+  
+            runs=$(gh api repos/$owner_repo/actions/workflows/$wf/runs --jq '.workflow_runs')
+            latest=$(echo "$runs" | jq '.[0]')
+  
+            if [ "$latest" = "null" ]; then
+              echo "No runs found for $wf"
               continue
             fi
+  
+            status=$(echo "$latest" | jq -r '.status // "unknown"')
+            conclusion=$(echo "$latest" | jq -r '.conclusion // "unknown"')
+            created=$(echo "$latest" | jq -r '.created_at')
+            html_url=$(echo "$latest" | jq -r '.html_url')
+  
+            prev=$(echo "$state" | jq -r --arg wf "$wf" '.[$wf] // "none"')
+  
+            echo "Status: $status | Conclusion: $conclusion | Prev: $prev"
+  
+            # Time calculation
+            now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            created_epoch=$(date -d "$created" +%s 2>/dev/null || echo 0)
+            now_epoch=$(date -d "$now" +%s 2>/dev/null || echo 0)
+            queued_minutes=$(( (now_epoch - created_epoch) / 60 ))
 
-            echo "$id,$num,$created,$severity" >> stale_runs.txt
+          # QUEUED LOGIC WITH SEVERITY
+          if [ "$status" = "queued" ]; then
 
-          done < runs.txt
+            if [ "$queued_minutes" -ge 90 ]; then
+              alerts="${alerts}
+              🚨 *SEVERE*: Workflow *$wf* stuck in queue for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
 
-          if [ -s stale_runs.txt ]; then
-            echo "stale_found=true" >> $GITHUB_ENV
-          fi
+            elif [ "$queued_minutes" -ge 60 ]; then
+              alerts="${alerts}
+              🔴 *HIGH*: Workflow *$wf* queued for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
 
-      - name: Send Slack Alert if stale jobs found
-        if: env.stale_found == 'true'
-        run: |
-          WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
-          
-          while IFS=',' read -r id num created severity; do
-            [ -z "$id" ] && continue
-
-            run_url="https://github.com/${{ github.repository }}/actions/runs/$id"
-
-            if [ "$severity" = "severe" ]; then
-              msg="🔥 Severe Alert: Job stuck >90 min    \nRun: $num\nCreated: $created\n$run_url"
-            elif [ "$severity" = "red" ]; then
-              msg="🚨 Red Alert: Job stuck >60 min     \nRun: $num\nCreated: $created\n$run_url"
-            else
-              msg="⚠️ Yellow Alert: Job stuck >30 min    \nRun: $num\nCreated: $created\n$run_url"
+            elif [ "$queued_minutes" -ge 30 ]; then
+              alerts="${alerts}
+              🟡 *WARNING*: Workflow *$wf* queued for *${queued_minutes} mins*
+              🔗 View Run: ${html_url}"
             fi
 
-            payload=$(jq -n --arg text "$msg" '{text: $text}')
-            
-            curl -X POST -H 'Content-type: application/json' \
-              --data "$payload" \
-              "$WEBHOOK"
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "queued_$queued_minutes" '.[$wf]=$val')
 
-            sleep 1
+          # FAILURE LOGIC
+            elif [ "$status" = "completed" ] && [ "$conclusion" = "failure" ]; then
+            if [ "$prev" != "failure" ]; then
+              alerts="${alerts}
+              ❌*FAILED*: Workflow *$wf* failed"
+            fi
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "failure" '.[$wf]=$val')
 
-          done < stale_runs.txt
+          # RECOVERY LOGIC
+          elif [ "$status" = "completed" ] && [ "$conclusion" = "success" ]; then
+            if [[ "$prev" == failure* || "$prev" == queued* ]]; then
+              alerts="${alerts}
+              ✅ *RECOVERED*: Workflow *$wf* is back to normal
+              🔗 View Run: ${html_url}"
+            fi
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "success" '.[$wf]=$val')
+
+          else
+            new_state=$(echo "$new_state" | jq --arg wf "$wf" --arg val "$status" '.[$wf]=$val')
+          fi
+
+          done
+
+          # Send Slack alert if needed
+          if [ -n "$alerts" ]; then
+            echo -e "Alerts: $alerts"
+  
+            payload=$(jq -n --arg text "$alerts" '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨Workflow Health Alert"
+                  }
+                },
+                {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": $text
+                }
+              }
+            ]
+          }')
+
+          curl -s POST -H "Content-type: application/json" \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
+          fi
+
+          # Save new state
+          echo "$new_state" > "$state_file" 
