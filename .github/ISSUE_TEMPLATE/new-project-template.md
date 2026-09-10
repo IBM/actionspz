@@ -20,15 +20,21 @@ A clear and concise description of what the project is.
 **Describe the primary use case for the Github Action Runner**
 Example: We want to build go libraries for ppc64le. Or run lint tests on s390x.
 
-**Paste a link to the existing actions workflow file(s), or directory with workflows, you wish to run on this service**
+**Paste a link to the actions workflow file(s), or directory with workflows, you wish to run on this service**
 Remember: You'll only want to run workflows that are required for test/build compatibility on ppc64le/s390x.
+
+If the workflow file you wish to run on these architectures doesn't exist yet, you may describe it here.
 
 **How often do you plan on executing the runner?**
 For example, every release or every commit.
 
-Details about how long your current workflows run are also helpful here.
+An educated estimate of how long (5 minutes? 4 hours?) you believe each test may take to run is also valuable here. This estimate can be based on similar tests you already run on other architectures.
 
 **What is the primary programming language for the project?**
+
+**To your knowledge, is this project included in a Product? Which one(s)?**
+
+This can be a product from any company/organization. This question is optional, but can help us report on the value of this service to a broad ecosystem of users.
 
 **Please select desired hardware**
 
