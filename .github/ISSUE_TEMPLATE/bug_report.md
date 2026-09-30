@@ -3,7 +3,7 @@ name: Bug report
 about: Create a report to help us improve
 title: "[BUG]"
 labels: ''
-assignees: mtarsel, mjturek, dale-fu, gha-sre
+assignees: rahulssv-ibm, arunchakraborty, dale-fu
 
 ---
 
