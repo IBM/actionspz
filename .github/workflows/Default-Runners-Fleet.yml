@@ -9,6 +9,9 @@ on:
   schedule:
     - cron: '*/30 * * * *' # Runs every 30 minutes
 
+permissions:
+  contents: read
+
 jobs:
   build:
     strategy:
