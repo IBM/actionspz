@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '0 */1 * * *'   # every 1 hour
 
+permissions:
+  contents: read
+
 jobs:
   health-check:
     strategy:
