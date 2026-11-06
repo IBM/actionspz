@@ -39,7 +39,7 @@ jobs:
       # Network test
       - name: Network test
         run: |
-          ping -c 4 github.com
+          timeout 10 bash -c '</dev/tcp/github.com/443'
           curl -I https://github.com
 
       # Memory check
