@@ -57,7 +57,7 @@ After the app is installed on the repo and settings are configured, specify the 
 
 ```yaml
 runs-on: ubuntu-xxx-s390x
-runs-on: ubuntu-xxx-ppc64le
+runs-on: ubuntu-xxx-ppc64le-p10
 ```
 
 View a list of our [supported images](./supported-images.txt) in this repo.
